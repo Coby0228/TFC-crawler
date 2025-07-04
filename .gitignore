@@ -8,6 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+.python-version
+*.toml
+*.lock
 
 # Data
-*.json
+data/

@@ -4,6 +4,7 @@ import time
 import json
 import urllib3
 import random
+import os
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -48,11 +49,13 @@ def crawl_links():
 
     return list(all_links)
 
-# 執行爬蟲
-report_links = crawl_links()
+if __name__ == "__main__":
+    report_links = crawl_links()
 
-# 存成 JSON
-with open("TFC_factcheck_links.json", "w", encoding="utf-8") as f:
-    json.dump(report_links, f, ensure_ascii=False, indent=4)
+    if os.path.exists("data"):
+        os.makedirs("data")
 
-print(f"✅ 共儲存 {len(report_links)} 筆查核報告連結到 factcheck_links.json")
+    with open("data/TFC_factcheck_links.json", "w", encoding="utf-8") as f:
+        json.dump(report_links, f, ensure_ascii=False, indent=4)
+
+    print(f"✅ 共儲存 {len(report_links)} 筆查核報告連結")
