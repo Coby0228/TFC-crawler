@@ -5,7 +5,6 @@ import json
 import urllib3
 import random
 
-# 關閉 SSL 警告（因為 verify=False）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def extract_valid_links(soup):
