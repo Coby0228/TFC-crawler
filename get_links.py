@@ -55,7 +55,7 @@ if __name__ == "__main__":
     if os.path.exists("data"):
         os.makedirs("data")
 
-    with open("data/TFC_factcheck_links.json", "w", encoding="utf-8") as f:
+    with open("data/url/TFC_factcheck_links.json", "w", encoding="utf-8") as f:
         json.dump(report_links, f, ensure_ascii=False, indent=4)
 
     print(f"✅ 共儲存 {len(report_links)} 筆查核報告連結")

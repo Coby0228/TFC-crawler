@@ -1,6 +1,6 @@
 import json
 
-with open("data/TFC_factcheck_links.json", "r", encoding="utf-8") as f:
+with open("data/url/TFC_factcheck_links.json", "r", encoding="utf-8") as f:
     urls = json.load(f)
 
 migration_urls = []
@@ -12,10 +12,10 @@ for url in urls:
     else:
         other_urls.append(url)
 
-with open("data/migration.json", "w", encoding="utf-8") as f:
+with open("data/url/migration.json", "w", encoding="utf-8") as f:
     json.dump(migration_urls, f, ensure_ascii=False, indent=2)
 
-with open("data/title.json", "w", encoding="utf-8") as f:
+with open("data/url/title.json", "w", encoding="utf-8") as f:
     json.dump(other_urls, f, ensure_ascii=False, indent=2)
 
 print("分類完成！")
