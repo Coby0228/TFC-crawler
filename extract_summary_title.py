@@ -27,14 +27,14 @@ for url in tqdm(urls, desc="抓取進度"):
 
         results.append({
             "url": url,
-            "plaintext": "\n".join(text_blocks)
+            "summary": "\n".join(text_blocks)
         })
 
     except Exception as e:
         print(f"❌ 錯誤: {url} → {e}")
         results.append({
             "url": url,
-            "plaintext": None,
+            "summary": None,
             "error": str(e)
         })
 
@@ -45,4 +45,4 @@ for url in tqdm(urls, desc="抓取進度"):
 with open("data/raw/title_summary.json", "w", encoding="utf-8") as f:
     json.dump(results, f, ensure_ascii=False, indent=2)
 
-print("✅ 所有頁面已處理完畢，結果儲存於 data/summary.json")
+print("✅ 所有頁面已處理完畢")
