@@ -11,6 +11,3 @@ wheels/
 .python-version
 *.toml
 *.lock
-
-# Data
-data/url/
