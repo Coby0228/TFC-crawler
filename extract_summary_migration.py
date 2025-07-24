@@ -68,8 +68,8 @@ def extract_claim_from_title(soup):
     match = re.search(pattern, title_text)
     return match.group(1).strip() if match else title_text
 
-def extract_type_from_title(soup):
-    """從 HTML <title> 擷取 type，即【...】中的文字"""
+def extract_verdict_from_title(soup):
+    """從 HTML <title> 擷取 verdict，即【...】中的文字"""
     title_tag = soup.title
     if not title_tag or not title_tag.string:
         return None
@@ -129,14 +129,14 @@ def main():
 
             soup = BeautifulSoup(res.text, "html.parser")
             claim_text = extract_claim_from_title(soup)
-            type_text = extract_type_from_title(soup)
+            verdict_text = extract_verdict_from_title(soup)
             report_text = extract_fact_check_blocks(soup)
 
             result_entry = {
                 "url": url,
                 "claim": claim_text,
                 "report": report_text,
-                "type": type_text,
+                "verdict": verdict_text,
             }
             results.append(result_entry)
             completed_urls.add(url)
