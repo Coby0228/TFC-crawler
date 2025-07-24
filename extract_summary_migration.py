@@ -6,9 +6,50 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 import urllib3
 import re
+import os
 
 # 禁用 SSL 警告
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Checkpoint 設定
+CHECKPOINT_FILE = "data/checkpoint/scraper_checkpoint.json"
+OUTPUT_FILE = "data/raw/TFC_migration_data.json"
+CHECKPOINT_INTERVAL = 500  # 每處理 500 個網址就儲存一次 checkpoint
+
+def load_checkpoint():
+    """載入 checkpoint 檔案"""
+    if os.path.exists(CHECKPOINT_FILE):
+        try:
+            with open(CHECKPOINT_FILE, "r", encoding="utf-8") as f:
+                checkpoint = json.load(f)
+            print(f"📁 載入 checkpoint: 已完成 {checkpoint['completed_count']} 個網址")
+            return checkpoint
+        except Exception as e:
+            print(f"⚠️ 載入 checkpoint 失敗: {e}")
+    return {"completed_urls": [], "results": [], "completed_count": 0}
+
+def save_checkpoint(checkpoint):
+    """儲存 checkpoint 檔案"""
+    try:
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(CHECKPOINT_FILE), exist_ok=True)
+        
+        with open(CHECKPOINT_FILE, "w", encoding="utf-8") as f:
+            json.dump(checkpoint, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ 儲存 checkpoint 失敗: {e}")
+
+def save_final_results(results):
+    """儲存最終結果"""
+    try:
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+        
+        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=4)
+        print(f"💾 結果已儲存到: {OUTPUT_FILE}")
+    except Exception as e:
+        print(f"❌ 儲存結果失敗: {e}")
 
 def extract_claim_from_title(soup):
     """從 HTML <title> 擷取 claim，去掉前綴符號與空格"""
@@ -54,43 +95,80 @@ def extract_fact_check_blocks(soup):
 
     return None
 
-# 讀取網址清單
-with open("data/url/migration.json", "r", encoding="utf-8") as f:
-    urls = json.load(f)
-
-results = []
-
-for url in tqdm(urls, desc="抓取進度"):
+def main():
+    # 讀取網址清單
     try:
-        res = requests.get(url, verify=False, timeout=20)
-        res.raise_for_status()
-
-        soup = BeautifulSoup(res.text, "html.parser")
-        claim_text = extract_claim_from_title(soup)
-        type_text = extract_type_from_title(soup)
-        report_text = extract_fact_check_blocks(soup)
-
-        result_entry = {
-            "url": url,
-            "claim": claim_text,
-            "report": report_text,
-            "type": type_text,
-        }
-        results.append(result_entry)
-
-        # print(f"url: {url}")
-        # print(f"claim: {claim_text}")
-        # print(f"type: {type_text}")
-        # print(f"report:\n{report_text}\n{'-'*50}")
-
-        time.sleep(random.uniform(1, 6))
-
+        with open("data/url/migration.json", "r", encoding="utf-8") as f:
+            urls = json.load(f)
+    except FileNotFoundError:
+        print("❌ 找不到網址檔案: data/url/migration.json")
+        return
     except Exception as e:
-        print(f"❌ 錯誤: {url} → {e}")
-        results.append({"url": url, "error": str(e)})
+        print(f"❌ 讀取網址檔案失敗: {e}")
+        return
 
-# 儲存結果
-with open("data/raw/TFC_migration_data.json", "w", encoding="utf-8") as f:
-    json.dump(results, f, ensure_ascii=False, indent=4)
+    # 載入 checkpoint
+    checkpoint = load_checkpoint()
+    completed_urls = set(checkpoint["completed_urls"])
+    results = checkpoint["results"]
+    
+    # 過濾出尚未處理的網址
+    remaining_urls = [url for url in urls if url not in completed_urls]
+    
+    if not remaining_urls:
+        print("🎉 所有網址都已處理完畢！")
+        return
+    
+    print(f"📊 總共 {len(urls)} 個網址，已完成 {len(completed_urls)} 個，剩餘 {len(remaining_urls)} 個")
 
-print("✅ 所有頁面已處理完畢")
+    # 開始處理剩餘的網址
+    for i, url in enumerate(tqdm(remaining_urls, desc="抓取進度")):
+        try:
+            res = requests.get(url, verify=False, timeout=20)
+            res.raise_for_status()
+
+            soup = BeautifulSoup(res.text, "html.parser")
+            claim_text = extract_claim_from_title(soup)
+            type_text = extract_type_from_title(soup)
+            report_text = extract_fact_check_blocks(soup)
+
+            result_entry = {
+                "url": url,
+                "claim": claim_text,
+                "report": report_text,
+                "type": type_text,
+            }
+            results.append(result_entry)
+            completed_urls.add(url)
+
+            # 每隔一定間隔儲存 checkpoint
+            if (i + 1) % CHECKPOINT_INTERVAL == 0:
+                checkpoint_data = {
+                    "completed_urls": list(completed_urls),
+                    "results": results,
+                    "completed_count": len(completed_urls)
+                }
+                save_checkpoint(checkpoint_data)
+                print(f"💾 Checkpoint 已儲存 ({len(completed_urls)}/{len(urls)})")
+
+            time.sleep(random.uniform(1, 6))
+
+        except Exception as e:
+            print(f"❌ 錯誤: {url} → {e}")
+            error_entry = {"url": url, "error": str(e)}
+            results.append(error_entry)
+            completed_urls.add(url)  # 即使出錯也標記為已處理，避免重複嘗試
+
+    # 最終儲存
+    final_checkpoint = {
+        "completed_urls": list(completed_urls),
+        "results": results,
+        "completed_count": len(completed_urls)
+    }
+    save_checkpoint(final_checkpoint)
+    save_final_results(results)
+
+    print("✅ 所有頁面已處理完畢")
+
+if __name__ == "__main__":
+    main()
