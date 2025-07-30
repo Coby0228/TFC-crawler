@@ -52,21 +52,30 @@ def save_final_results(results):
         print(f"❌ 儲存結果失敗: {e}")
 
 def extract_claim_from_title(soup):
-    """從 HTML <title> 擷取 claim，去掉前綴符號與空格"""
+    """從 HTML <title> 擷取 claim，移除查核單位後綴與分類標籤"""
     title_tag = soup.title
     if not title_tag or not title_tag.string:
         return None
 
     title_text = title_tag.string.strip()
 
-    # 使用正則處理格式
-    if '】' in title_text:
-        pattern = r'】([^ ]+)'  # 】 後到第一個空白
+    # 步驟 1: 從後往前找到 " - "，移除後面的查核單位名稱
+    # 這能處理如 " - 台灣事實查核中心" 的後綴
+    if ' - ' in title_text:
+        last_separator_index = title_text.rfind(' - ')
+        main_title = title_text[:last_separator_index].strip()
     else:
-        pattern = r'^([^ ]+)'  # 從開頭到第一個空白
+        main_title = title_text
 
-    match = re.search(pattern, title_text)
-    return match.group(1).strip() if match else title_text
+    # 步驟 2: 從處理過的標題中，移除前面的【分類】標籤
+    if '】' in main_title:
+        tag_end_index = main_title.find('】')
+        claim = main_title[tag_end_index + 1:].strip()
+    else:
+        claim = main_title
+
+    print(f"📖 擷取 claim: {claim}")    
+    return claim if claim else None
 
 def extract_verdict_from_title(soup):
     """從 HTML <title> 擷取 verdict，即【...】中的文字"""

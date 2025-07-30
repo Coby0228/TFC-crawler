@@ -22,7 +22,7 @@ if isinstance(data, list):
         if 'url' in item and isinstance(item['url'], str):
             match = re.search(r'migration-(\d+)', item['url'])
             if match:
-                item['event_id'] = int(match.group(1))
+                item['event_id'] = match.group(1)
             else:
                 item['event_id'] = None
         else:
